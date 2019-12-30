@@ -1,6 +1,8 @@
 import * as Yup from 'yup';
 import { addMonths, parseISO } from 'date-fns';
 
+import Queue from '../../lib/Queue';
+
 import Registration from '../models/Registration';
 import Student from '../models/Student';
 import Plan from '../models/Plan';
@@ -43,14 +45,12 @@ class RegistrationController {
 
     const { student_id, plan_id, start_date } = req.body;
 
-    const { price, duration } = await Plan.findByPk(plan_id);
+    const plan = await Plan.findByPk(plan_id);
+
+    const { price, duration } = plan;
 
     const totalPrice = price * duration;
     const end_date = addMonths(parseISO(start_date), duration);
-
-    /**
-     * TODO - Check if student is already registrated
-     */
 
     const registration = await Registration.create({
       student_id,
@@ -63,6 +63,11 @@ class RegistrationController {
     /**
      * Send email
      */
+
+    const student = await Student.findByPk(student_id);
+
+    await Queue.add('RegistrationMail', { registration, student, plan });
+
     return res.json(registration);
   }
 }
