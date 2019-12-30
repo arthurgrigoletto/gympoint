@@ -9,14 +9,15 @@ export default {
     await Mail.sendMail({
       from: 'Gympoint <secretaria@gympoint.com.br>',
       to: `${student.name} <${student.email}>`,
+      template: 'registration',
       subject: 'Matrícula realizada com Sucesso',
-      html: `Olá ${student.name}, bem-vindo á Gympoint! O plano escolhido foi ${
-        plan.title
-      } com o total de ${formatPrice(registration.price)}, parcelado em ${
-        plan.duration
-      }x ${formatPrice(plan.price)}. Seu plano vencerá no dia ${formatDate(
-        registration.end_date
-      )} então fique ligado! :D`,
+      context: {
+        student: student.name,
+        plan: plan.title,
+        price: formatPrice(registration.price),
+        parcel: `${plan.duration}x ${formatPrice(plan.price)}`,
+        end_date: formatDate(registration.end_date),
+      },
     });
   },
 };
