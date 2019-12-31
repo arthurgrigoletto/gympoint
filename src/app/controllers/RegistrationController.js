@@ -101,7 +101,6 @@ class RegistrationController {
     });
 
     await registration.update({
-      student_id: registration.student_id,
       plan_id,
       price,
       start_date,
