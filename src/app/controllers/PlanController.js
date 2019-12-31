@@ -1,29 +1,31 @@
-import * as Yup from 'yup';
-
 import Plan from '../models/Plan';
+
+import Cache from '../../lib/Cache';
 
 class PlanController {
   async index(req, res) {
+    const { page = 1 } = req.query;
+
+    const cacheKey = `user:${req.userId}:plans:${page}`;
+
+    const cached = await Cache.get(cacheKey);
+
+    if (cached) {
+      return res.json(cached);
+    }
+
     const plans = await Plan.findAll({
       attributes: ['id', 'title', 'duration', 'price'],
+      limit: 20,
+      offset: (page - 1) * 20,
     });
+
+    await Cache.set(cacheKey, plans);
 
     return res.json(plans);
   }
 
   async store(req, res) {
-    const schema = Yup.object().shape({
-      title: Yup.string().required(),
-      duration: Yup.number()
-        .integer()
-        .required(),
-      price: Yup.number().required(),
-    });
-
-    if (!(await schema.isValid(req.body))) {
-      return res.status(400).json({ error: 'Validation fail' });
-    }
-
     const planExists = await Plan.findOne({ where: { title: req.body.title } });
 
     if (planExists) {
@@ -31,6 +33,12 @@ class PlanController {
     }
 
     const { id, title, duration, price } = await Plan.create(req.body);
+
+    /**
+     * Invalidate Cache
+     */
+
+    await Cache.invalidatePrefix(`user:${req.userId}:plans`);
 
     return res.json({
       id,
@@ -41,16 +49,6 @@ class PlanController {
   }
 
   async update(req, res) {
-    const schema = Yup.object().shape({
-      title: Yup.string(),
-      duration: Yup.number().integer(),
-      price: Yup.number(),
-    });
-
-    if (!(await schema.isValid(req.body))) {
-      return res.status(400).json({ error: 'Validation fail' });
-    }
-
     const plan = await Plan.findByPk(req.params.id);
 
     const { title: titleToUpdate } = req.body;
@@ -69,6 +67,12 @@ class PlanController {
 
     const { id, title, duration, price } = await plan.update(req.body);
 
+    /**
+     * Invalidate Cache
+     */
+
+    await Cache.invalidatePrefix(`user:${req.userId}:plans`);
+
     return res.json({ id, title, duration, price });
   }
 
@@ -83,7 +87,13 @@ class PlanController {
 
     await plan.destroy();
 
-    return res.json({ destroyed: true, plan });
+    /**
+     * Invalidate Cache
+     */
+
+    await Cache.invalidatePrefix(`user:${req.userId}:plans`);
+
+    return res.json({ success: true, plan });
   }
 }
 

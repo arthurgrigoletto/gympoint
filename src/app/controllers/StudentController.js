@@ -1,32 +1,32 @@
-import * as Yup from 'yup';
 import Student from '../models/Student';
+
+import Cache from '../../lib/Cache';
 
 class StudentController {
   async index(req, res) {
+    const { page = 1 } = req.query;
+
+    const cacheKey = `user:${req.userId}:students:${page}`;
+
+    const cached = await Cache.get(cacheKey);
+
+    if (cached) {
+      return res.json(cached);
+    }
+
     const students = await Student.findAll({
+      order: ['name'],
       attributes: ['id', 'name', 'email', 'idade', 'peso', 'altura'],
+      limit: 20,
+      offset: (page - 1) * 20,
     });
+
+    await Cache.set(cacheKey, students);
 
     return res.json(students);
   }
 
   async store(req, res) {
-    const schema = Yup.object().shape({
-      name: Yup.string().required(),
-      email: Yup.string()
-        .email()
-        .required(),
-      idade: Yup.number()
-        .integer()
-        .required(),
-      peso: Yup.number().required(),
-      altura: Yup.number().required(),
-    });
-
-    if (!(await schema.isValid(req.body))) {
-      return res.status(400).json({ error: 'Validation fail' });
-    }
-
     const studentExists = await Student.findOne({
       where: { email: req.body.email },
     });
@@ -39,6 +39,12 @@ class StudentController {
       req.body
     );
 
+    /**
+     * Invalidate Cache
+     */
+
+    await Cache.invalidatePrefix(`user:${req.userId}:students`);
+
     return res.json({
       id,
       name,
@@ -50,25 +56,13 @@ class StudentController {
   }
 
   async update(req, res) {
-    const schema = Yup.object().shape({
-      name: Yup.string(),
-      email: Yup.string().email(),
-      idade: Yup.number().integer(),
-      peso: Yup.number(),
-      altura: Yup.number(),
-    });
-
-    if (!(await schema.isValid(req.body))) {
-      return res.status(400).json({ error: 'Validation fail' });
-    }
-
     const student = await Student.findByPk(req.params.id);
 
     const { email: emailToUpdate } = req.body;
 
     if (emailToUpdate) {
       const studentExists = await Student.findOne({
-        where: { emailToUpdate },
+        where: { email: emailToUpdate },
       });
 
       if (studentExists) {
@@ -79,6 +73,12 @@ class StudentController {
     const { id, name, email, idade, peso, altura } = await student.update(
       req.body
     );
+
+    /**
+     * Invalidate Cache
+     */
+
+    await Cache.invalidatePrefix(`user:${req.userId}:students`);
 
     return res.json({ id, name, email, idade, peso, altura });
   }
