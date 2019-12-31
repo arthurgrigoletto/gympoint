@@ -65,7 +65,7 @@ routes.post(
 routes.put(
   '/registrations/:id',
   validateRegistrationUpdate,
-  RegistrationController.store
+  RegistrationController.update
 );
 routes.delete('/registrations/:id', RegistrationController.destroy);
 

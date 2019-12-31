@@ -1,11 +1,11 @@
-import { addMonths, parseISO } from 'date-fns';
-
 import Cache from '../../lib/Cache';
 import Queue from '../../lib/Queue';
 
 import Registration from '../models/Registration';
 import Student from '../models/Student';
 import Plan from '../models/Plan';
+
+import PlanCalculateService from '../services/PlanCalculateService';
 
 class RegistrationController {
   async index(req, res) {
@@ -47,15 +47,16 @@ class RegistrationController {
 
     const plan = await Plan.findByPk(plan_id);
 
-    const { price, duration } = plan;
-
-    const totalPrice = price * duration;
-    const end_date = addMonths(parseISO(start_date), duration);
+    const { price, end_date } = PlanCalculateService.run({
+      price: plan.price,
+      duration: plan.duration,
+      start_date,
+    });
 
     const registration = await Registration.create({
       student_id,
       plan_id,
-      price: totalPrice,
+      price,
       start_date,
       end_date,
     });
@@ -73,6 +74,45 @@ class RegistrationController {
     const student = await Student.findByPk(student_id);
 
     await Queue.add('RegistrationMail', { registration, student, plan });
+
+    return res.json(registration);
+  }
+
+  /**
+   * I didn't pass student id to avoid more than one registration to student
+   */
+  async update(req, res) {
+    const { plan_id, start_date } = req.body;
+
+    const registration = await Registration.findByPk(req.params.id);
+
+    if (!registration) {
+      return res
+        .status(404)
+        .json({ error: `Cannot find registration with ID: ${req.params.id}` });
+    }
+
+    const plan = await Plan.findByPk(plan_id);
+
+    const { price, end_date } = await PlanCalculateService.run({
+      price: plan.price,
+      duration: plan.duration,
+      start_date,
+    });
+
+    await registration.update({
+      student_id: registration.student_id,
+      plan_id,
+      price,
+      start_date,
+      end_date,
+    });
+
+    /**
+     * Invalidate Cache
+     */
+
+    await Cache.invalidatePrefix(`user:${req.userId}:registrations`);
 
     return res.json(registration);
   }
