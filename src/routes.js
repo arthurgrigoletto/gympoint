@@ -7,6 +7,7 @@ import SessionController from './app/controllers/SessionController';
 import StudentController from './app/controllers/StudentController';
 import PlanController from './app/controllers/PlanController';
 import RegistrationController from './app/controllers/RegistrationController';
+import CheckinController from './app/controllers/CheckinController';
 
 import validateUserStore from './app/validations/UserStore';
 import validateSessionStore from './app/validations/SessionStore';
@@ -44,6 +45,12 @@ routes.use(authMiddleware);
 routes.get('/students', StudentController.index);
 routes.post('/students', validateStudentStore, StudentController.store);
 routes.put('/students/:id', validateStudentUpdate, StudentController.update);
+
+/**
+ * Checkins
+ */
+routes.get('/students/:id/checkins', CheckinController.index);
+routes.post('/students/:id/checkins', CheckinController.store);
 
 /**
  * Plans
