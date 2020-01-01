@@ -8,6 +8,7 @@ import StudentController from './app/controllers/StudentController';
 import PlanController from './app/controllers/PlanController';
 import RegistrationController from './app/controllers/RegistrationController';
 import CheckinController from './app/controllers/CheckinController';
+import HelpOrderController from './app/controllers/HelpOrderController';
 
 import validateUserStore from './app/validations/UserStore';
 import validateSessionStore from './app/validations/SessionStore';
@@ -51,6 +52,17 @@ routes.put('/students/:id', validateStudentUpdate, StudentController.update);
  */
 routes.get('/students/:id/checkins', CheckinController.index);
 routes.post('/students/:id/checkins', CheckinController.store);
+
+/**
+ * Help Orders
+ */
+routes.get('/help-orders', HelpOrderController.index);
+routes.post('/help-orders/:id/answer', HelpOrderController.answer);
+routes.get(
+  '/students/:id/help-orders',
+  HelpOrderController.getHelpOrdersByStudent
+);
+routes.post('/students/:id/help-orders', HelpOrderController.store);
 
 /**
  * Plans

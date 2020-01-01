@@ -47,7 +47,7 @@ class RegistrationController {
 
     const plan = await Plan.findByPk(plan_id);
 
-    const { price, end_date } = PlanCalculateService.run({
+    const { price, end_date } = await PlanCalculateService.run({
       price: plan.price,
       duration: plan.duration,
       start_date,
